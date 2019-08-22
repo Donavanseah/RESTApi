@@ -36,8 +36,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // TODO 1/2 Load schemans
 
+const citySchema = require('./schema/city-schema.json');
 
-
+console.info(citySchema)
 
 // Start of workshop
 // Start of workshop
@@ -120,6 +121,7 @@ app.get('/api/city/:cityId', (req, resp) => {
 // TODO POST /api/city
 app.post(
 	'/api/city',
+	schemaValidator.validate({body:citySchema}),
 	(req,resp) => {
 		const data = req.body;
 		console.info('>> data: ', data)
