@@ -100,17 +100,34 @@ app.get('/api/city/:cityId', (req, resp) => {
 
 
 // TODO POST /api/city
-
+app.post(
+	'/api/city',
+	(req,resp) => {
+		const data = req.body;
+		console.info('>> data: ', data)
+		db.insertCity(data)
+		.then(result=> {
+			resp.status(201)
+			resp.type('application/json')
+			resp.json( {message: 'added'});
+		})
+		.catch(error =>{
+			resp.status(400);
+			resp.type('text/plain');
+			resp.send(error);
+		})
+	}
+)
 
 
 
 // Optional workshop
 // TODO HEAD /api/state/:state
 app.head('/appi/state/:state', (req,resp) => {
-resp.status(200);
-resp.type('application.json');
-resp.header('Accept-Ranges','cities');
-resp.end();
+	resp.status(200);
+	resp.type('application.json');
+	resp.header('Accept-Ranges','cities');
+	resp.end();
 })
 
 // IMPORTANT: HEAD must be place before GET for the
