@@ -38,7 +38,13 @@ app.use(express.urlencoded({ extended: true }));
 
 const citySchema = require('./schema/city-schema.json');
 
-console.info(citySchema)
+//console.info(citySchema)
+
+new OpenAPIValidator(
+	{
+		apiSpecPath: __dirname + '/schema/city-api.yaml'
+	}
+).install(app)
 
 // Start of workshop
 // Start of workshop
