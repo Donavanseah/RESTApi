@@ -225,9 +225,38 @@ db.getDB()
 
 			// TODO 3/3 Add service registration here
 
+			console.info(`Registering Servcie ${serviceName}:${serviceId}`);
 
-
-
+			consul.agent.service.register({
+				id: serviceId,
+				name: serviceName,
+				port: PORT,
+				check: {
+					ttl: '10s',
+					deregistercriticalserviceafter: '30s'
+				}				
+			})
+			.then(() => {
+				const intId = setInternal(
+					() => 
+					{
+						consul.agent.check.pass(
+							{
+								id: `${serviceId}:${serviceId}`
+							}
+						)
+					},
+				)
+				process.on('SIGINT',
+					() => {
+						console.info();
+						clearInterval(intId);
+						consul.agent.service.deregister(
+							{id: `id: `}
+						)
+					}
+				)
+			})
 		});
 	})
 	.catch(error => {
