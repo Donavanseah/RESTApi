@@ -32,8 +32,8 @@ console.info(`Using ${keys.mongo}`);
 // if they are not the defaults below
 const db = CitiesDB({  
 	connectionUrl: keys.mongo, 
-	databaseName: 'zips', 
-	collectionName: 'city'
+	databaseName: 'cities', 
+	collectionName: 'cities'
 });
 
 const app = express();
@@ -49,13 +49,142 @@ app.use(express.urlencoded({ extended: true }));
 
 // TODO 1/3 Load schemans
 
-
-
-
 // TODO 2/3 Copy your routes from workshop03 here
+// TODO 1/2 Load schemans
+
+const citySchema = require('./schema/city-schema.json');
+
+//console.info(citySchema)
+
+//new OpenAPIValidator(
+//	{
+//		apiSpecPath: __dirname + '/schema/city-api.yaml'
+//	}
+//).install(app)
+
+// Start of workshop
+// Start of workshop
+
+// Mandatory workshop
+// TODO GET /api/states
+app.get('/api/states', 
+	cacheControl({ maxAge: 10, public: true}),
+	(req, resp) => {
+		console.info('Processing /api/statye', new Date());
+		db.findAllStates()
+		.then( result => {
+			resp.status(200);
+			resp.type('application.json');
+			//resp.json(result);
+			resp.json(result.map(v => `/api/state/${v}`));
+		})
+		.catch( error => {
+			resp.status(400);
+			resp.type('text/plain');
+			resp.send(error);
+		})
+}) 
 
 
 
+// TODO GET /api/state/:state
+const etagFunction = {
+	stateAsync: (req) => {
+		const state = req.params.state.toLowerCase();
+		const p = new Promise(
+			(resolve, reject) => {
+				db.countCitiesInState(state)
+					.then(result =>
+					{
+						resolve(state + result);
+					})
+					.catch(error => {
+						reject(error);
+					})
+			}
+		);
+		return(p);
+	}
+}
+app.get('/api/state/:state', 
+	preconditions(etagFunction),
+	cacheControl({noCache: true}),
+	range({accept: 'cities', limit: 20}),(req, resp) => {
+	const state = req.params.state;
+	const first = req.range.first;
+	const last = req.range.last;
+
+	Promise.all([
+	db.findCitiesByState(state, {limit: last - first + 1, offset: first}),
+	db.countCitiesInState(state)
+		]).then( result => {
+			//resp.status(200);
+			resp.status(206);
+			resp.type('application.json');
+			resp.set('eTag', `"${state.toLocaleLowerCase()}${result[1]}"`);
+
+			//resp.json(result);
+			resp.range({
+				first: first,
+				last: last,
+				length: result[1]
+			})
+			resp.json(result[0].map(v => `/api/city/${v}`));
+		})
+		.catch( error => {
+			resp.status(400);
+			resp.type('text/plain');
+			resp.send(error);
+		})
+})
+
+
+
+// TODO GET /api/city/:cityId
+app.get('/api/city/:cityId', (req, resp) => {
+	const cityId = req.params.cityId;
+	db.findCityById(cityId)
+		.then( result => {
+			resp.type('application.json');
+			//resp.json(result);
+			//resp.json(result[0]);
+			if(result.length > 0)
+			{
+				resp.status(200);
+				resp.json(result[0]);
+			}else{
+				resp.status(400);
+				resp.json({message: `CityId ${cityId} Not Found, Please Try Again.`});
+			}
+		})
+		.catch( error => {
+			resp.status(400);
+			resp.type('text/plain');
+			resp.send(error);
+		})
+})
+
+
+// TODO POST /api/city
+app.post(
+	'/api/city',
+	schemaValidator.validate({body:citySchema}),
+	(req,resp) => {
+		const data = req.body;
+		console.info('>> data: ', data)
+		db.insertCity(data)
+		.then(result=> {
+			resp.status(201)
+			resp.type('application/json')
+			resp.json( {message: 'added'});
+		})
+		.catch(error =>{
+			resp.status(400);
+			resp.type('text/plain');
+			resp.send(error);
+		})
+	}
+)
 
 
 // End of workshop
